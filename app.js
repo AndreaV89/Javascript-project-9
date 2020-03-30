@@ -3,8 +3,8 @@
 // load modules
 const express = require('express');
 const morgan = require('morgan');
-const { sequelize, models } = require('./db');
-
+const db = require('./db');
+const { User, Course} = db.models;
 
 // variable to enable global error logging
 const enableGlobalErrorLogging = process.env.ENABLE_GLOBAL_ERROR_LOGGING === 'true';
@@ -15,17 +15,48 @@ const app = express();
 // setup morgan which gives us http request logging
 app.use(morgan('dev'));
 
-// TODO setup your api routes here
 console.log('Testing the connection to the database...');
 
+// async IIFE
 (async () => {
   try {
+    // Test the connection to the database
+    await db.sequelize.authenticate();
     console.log('Connection to the database successful!');
-    await sequelize.authenticate();
-  } catch (error) {
-    throw error;
+
+    // Sync the models
+    console.log('Synchronizing the models with the database...');
+    await db.sequelize.sync();
+
+    // Retrieve Users
+    const users = await User.findAll();
+    console.log('Users:');
+    console.log(users.map(user => user.get({ plain: true })));
+
+    // Retrieve Courses
+    const courses = await Course.findAll({
+      include: [
+        {
+          model: User,
+        },
+      ],
+    });
+    console.log('Courses:');
+    console.log(courses.map(course => course.get({ plain: true})));
+
+    process.exit();
+
+  } catch(error) {
+    if (error.name === 'SequelizeValidationError') {
+      const errors = error.errors.map(err => err.message);
+      console.error('Validation errors: ', errors);
+    } else {
+      throw error;
+    }
   }
 })();
+
+// TODO setup your api routes here
 
 // setup a friendly greeting for the root route
 app.get('/', (req, res) => {
