@@ -36,7 +36,7 @@ router.post('/users', asyncHandler (async (req, res) => {
     firstName: req.body.firstName,
     lastName: req.body.lastName,
     emailAddress: req.body.emailAddress,
-    password: req.body.password,
+    password: req.body.password
   });
   res.json(user);
 }));
