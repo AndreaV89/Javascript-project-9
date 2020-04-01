@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
+// const { check, validationResult } = require('express-validator/check');
+
 const db = require('./db');
 const { User, Course} = db.models;
 
@@ -23,9 +25,10 @@ router.get('/', (req, res) => {
 });
 
 // GET request to /users to return the currently authenticated user
-router.get('/users', (req, res) => {
-
-});
+router.get('/users', asyncHandler (async (req, res) => {
+  const users = await User.findAll();
+  res.json(users);
+}));
 
 // Post request to /users to create a user
 router.post('/users', asyncHandler (async (req, res) => {
@@ -85,6 +88,7 @@ router.put('/courses/:id', asyncHandler (async (req, res) => {
 router.delete('/courses/:id', asyncHandler (async (req, res) => {
   const course = await Course.findByPk(req.params.id);
   await course.destroy();
+  res.status(204).end();
 }));
 
 
