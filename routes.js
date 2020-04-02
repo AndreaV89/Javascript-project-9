@@ -1,11 +1,15 @@
+// Load modules
 const express = require('express');
 const router = express.Router();
 
-const { check, validationResult } = require('express-validator/check');
+// Load express validator
+const { check, validationResult } = require('express-validator');
 
+// Load bcrypt and basic-auth for authentication features
 const bcryptjs = require('bcryptjs');
 const auth = require('basic-auth');
 
+// Load database Models
 const db = require('./db');
 const { User, Course} = db.models;
 
@@ -36,9 +40,9 @@ async function authenticateUser (req, res, next) {
 
     // If a user was successfully retrieved from the data store...
     if (user) {
-      // Use the bcryptjs npm package to compare the user's password
+      // Use bcryptjs to compare the user's password
       // (from the Authorization header) to the user's password
-      // that was retrieved from the data store.
+      // that was retrieved from the database.
       const authenticated = bcryptjs.compareSync(credentials.pass, user.password);
 
       // If the passwords match...
@@ -84,7 +88,7 @@ router.get('/users', authenticateUser, asyncHandler (async (req, res) => {
     attributes: ['id', 'firstName', 'lastName', 'emailAddress'],
     where: { id: req.currentUser.id}
   });
-  res.json(user);
+  res.status(200).json(user);
 }));
 
 // Post request to /users to create a user
@@ -149,6 +153,7 @@ router.get('/courses/:id', asyncHandler( async (req, res) => {
       {
         model: User,
         as: 'owner',
+        attributes: ['id', 'firstName', 'lastName', 'emailAddress']
       },
     ],
   });

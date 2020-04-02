@@ -32,22 +32,6 @@ console.log('Testing the connection to the database...');
     console.log('Synchronizing the models with the database...');
     await db.sequelize.sync();
 
-    // Retrieve Users
-    // const users = await User.findAll();
-    // console.log('Users:');
-    // console.log(users.map(user => user.get({ plain: true })));
-
-    // Retrieve Courses
-    // const courses = await Course.findAll({
-    //   include: [
-    //     {
-    //       model: User,
-    //     },
-    //   ],
-    // });
-    // console.log('Courses:');
-    // console.log(courses.map(course => course.get({ plain: true})));
-
   } catch(error) {
     if (error.name === 'SequelizeValidationError') {
       const errors = error.errors.map(err => err.message);
