@@ -43,7 +43,14 @@ module.exports = (sequelize) => {
         notEmpty: {
           msg: 'Please provide a value for "email"',
         },
+        isEmail: {
+          msg: 'Please provide a valid email address for "email"',
+        },
       },
+      unique: {
+        args: true,
+        msg: 'Email address already in use!'
+      }
     },
     password: {
       type: Sequelize.STRING,
@@ -57,7 +64,7 @@ module.exports = (sequelize) => {
         },
       },
     },
-  }, { sequelize });
+  }, { sequelize, timestamps: false });
 
   User.associate = (models) => {
     User.hasMany(models.Course, {
