@@ -51,9 +51,9 @@ app.use((req, res, next) => {
 
 // setup a global error handler
 app.use((err, req, res, next) => {
-  if(err.name === 'SequelizeUniqueConstraintError') {
-    err.status = 409;
-  }
+  // if(err.name === 'SequelizeUniqueConstraintError') {
+  //   err.status = 409;
+  // }
   res.status(err.status || 500).json({
     error: {
       message: err.message,

@@ -2,9 +2,6 @@
 const express = require('express');
 const router = express.Router();
 
-// Load express validator
-const { check, validationResult } = require('express-validator');
-
 // Load bcrypt and basic-auth for authentication features
 const bcryptjs = require('bcryptjs');
 const auth = require('basic-auth');
@@ -30,7 +27,7 @@ async function authenticateUser (req, res, next) {
 
   // Parse the user's credentials from the Authorization header.
   const credentials = auth(req);
-  credentials.name = credentials.name.toLowerCase();
+  credentials.name = credentials.name;
 
   // If the user's credentials are available...
   if (credentials) {
@@ -86,50 +83,23 @@ router.get('/', (req, res) => {
 router.get('/users', authenticateUser, asyncHandler (async (req, res) => {
   const user = await User.findAll({
     attributes: ['id', 'firstName', 'lastName', 'emailAddress'],
-    where: { id: req.currentUser.id}
+    where: { id: req.currentUser.id }
   });
   res.status(200).json(user);
 }));
 
 // Post request to /users to create a user
-router.post('/users', [
-  check('firstName')
-    .exists({ checkFalsy: true, checkNull: true })
-    .withMessage('Please provide a value for "firstName"'),
-  check('lastName')
-    .exists({ checkFalsy: true, checkNull: true })
-    .withMessage('Please provide a value for "lastName"'),
-  check('emailAddress')
-    .exists({ checkFalsy: true, checkNull: true })
-    .withMessage('Please provide a value for "emailAddress"')
-    .isEmail()
-    .withMessage('Please provide a valid email address for "emailAddress"'),
-  check('password')
-    .exists({ checkFalsy: true, checkNull: true })
-    .withMessage('Please provide a value for "password"'),
-], asyncHandler (async (req, res) => {
-  // Get the valutation result
-  const errors = validationResult(req);
-
-  // If there are validation errors...
-  if (!errors.isEmpty()) {
-    const errorMessages = errors.array().map(error => error.msg);
-
-    // Return the validation errors
-    res.status(400).json({ errors: errorMessages });
-  } else {
-    // Hash the password 
-    req.body.password = bcryptjs.hashSync(req.body.password);
-    // Create the user
-    await User.create({
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      emailAddress: req.body.emailAddress.toLowerCase(),
-      password: req.body.password
-    });
-    res.location('/');
-    res.status(201).end();
-  }
+router.post('/users', asyncHandler (async (req, res) => {
+  // Hash the password 
+  req.body.password = bcryptjs.hashSync(req.body.password);
+  // Create the user
+  await User.create({
+    firstName: req.body.firstName,
+    lastName: req.body.lastName,
+    emailAddress: req.body.emailAddress,
+    password: req.body.password
+  });
+  res.status(201).end();
 }));
 
 // GET request to /courses to return a list of courses (including the user that owns each course)
@@ -165,34 +135,16 @@ router.get('/courses/:id', asyncHandler( async (req, res) => {
 }));
 
 // POST request to /courses to create a course
-router.post('/courses', authenticateUser, [
-  check('title')
-    .exists({ checkFalsy: true, checkNull: true })
-    .withMessage('Please provide a value for "title"'),
-  check('description')
-    .exists({ checkFalsy: true, checkNull: true })
-    .withMessage('Please provide a value for "description"'),
-], asyncHandler (async (req, res) => {
-  // Get the valutation result
-  const errors = validationResult(req);
-
-  // If there are validation errors...
-  if (!errors.isEmpty()) {
-    const errorMessages = errors.array().map(error => error.msg);
-  
-    // Return the validation errors
-    res.status(400).json({ errors: errorMessages });
-  } else {
-    await Course.create({
-      title: req.body.title,
-      description: req.body.description,
-      estimatedTime: req.body.estimatedTime,
-      materialsNeeded: req.body.materialsNeeded,
-      userId: req.body.userId,
-    });
-    res.location('/');
-    res.status(201).end();
-  }
+router.post('/courses', asyncHandler (async (req, res) => {
+  await Course.create({
+    title: req.body.title,
+    description: req.body.description,
+    estimatedTime: req.body.estimatedTime,
+    materialsNeeded: req.body.materialsNeeded,
+    userId: req.body.userId,
+  });
+  res.location('/');
+  res.status(201).end();
 }));
 
 // PUT request to /courses/:id to update a course

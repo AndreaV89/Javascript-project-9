@@ -42,7 +42,6 @@ module.exports = (sequelize) => {
       as: 'owner',
       foreignKey: {
         fieldName: 'userId',
-        allowNull: false,
       },
     });
   };
