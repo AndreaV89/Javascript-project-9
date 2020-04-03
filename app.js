@@ -1,11 +1,17 @@
 'use strict';
 
-// load modules
+// Load modules
 const express = require('express');
 const morgan = require('morgan');
+
+// Load database
 const db = require('./db');
-const { User, Course} = db.models;
+
+// Load routes
 const routes = require('./routes');
+
+// variable to enable global error logging
+const enableGlobalErrorLogging = process.env.ENABLE_GLOBAL_ERROR_LOGGING === 'true';
 
 // create the Express app
 const app = express();
@@ -32,6 +38,8 @@ console.log('Testing the connection to the database...');
     console.log('Synchronizing the models with the database...');
     await db.sequelize.sync();
 
+    console.log('The app is running correctly');
+
   } catch(error) {
     if (error.name === 'SequelizeValidationError') {
       const errors = error.errors.map(err => err.message);
@@ -43,23 +51,21 @@ console.log('Testing the connection to the database...');
 })();
 
 // send 404 if no other route matched
-app.use((req, res, next) => {
-  const err = new Error("Not Found");
-  err.status = 404;
-  next(err);
+app.use((req, res) => {
+  res.status(404).json({
+    message: 'Route Not Found',
+  });
 });
 
 // setup a global error handler
 app.use((err, req, res, next) => {
-  // if(err.name === 'SequelizeUniqueConstraintError') {
-  //   err.status = 409;
-  // }
+  if (enableGlobalErrorLogging) {
+    console.error(`Global error handler: ${JSON.stringify(err.stack)}`);
+  }
+
   res.status(err.status || 500).json({
-    error: {
-      message: err.message,
-      status: err.status,
-      stack: err.stack
-    }
+    message: err.message,
+    error: {},
   });
 });
 
