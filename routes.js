@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 
+const { check, validationResult } = require('express-validator');
+
 // Load bcrypt and basic-auth for authentication features
 const bcryptjs = require('bcryptjs');
 const auth = require('basic-auth');
@@ -88,23 +90,58 @@ router.get('/users', authenticateUser, asyncHandler (async (req, res) => {
   res.status(200).json(user);
 }));
 
-// Post request to /users to create a user
-router.post('/users', asyncHandler (async (req, res) => {
-  // Hash the password 
-  req.body.password = bcryptjs.hashSync(req.body.password);
-  // Create the user
-  await User.create({
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    emailAddress: req.body.emailAddress,
-    password: req.body.password
-  });
-  res.status(201).end();
+// POST request to /users to create a user
+router.post('/users', [
+  check('firstName')
+    .exists()
+    .withMessage('Please provide a value for "firstName"'),
+  check('lastName')
+    .exists()
+    .withMessage('Please provide a value for "lastName"'),
+  check('emailAddress')
+    .exists()
+    .withMessage('Please provide a value for "emailAddress"')
+    .isEmail()
+    .withMessage('Please provide a valid email address for "emailAddress"'),
+  check('password')
+    .exists()
+    .withMessage('Please provide a value for "password"'),
+], asyncHandler (async (req, res) => {
+  // Check if the provided email already exists or not
+  const emails = await User.findAll({ where: { emailAddress: req.body.emailAddress }});
+  if (emails) {
+    res.status(409).json({ errors: 'Provided email already in use' });
+  } else {
+    // Attempt to get the validation result from the Request object.
+    const errors = validationResult(req);
+
+    // If there are validation errors...
+    if (!errors.isEmpty()) {
+      // Use the Array `map()` method to get a list of error messages.
+      const errorMessages = errors.array().map(error => error.msg);
+
+      // Return the validation errors to the client.
+      res.status(400).json({ errors: errorMessages });
+    } else {
+      // Hash the password 
+      req.body.password = bcryptjs.hashSync(req.body.password);
+      // Create the user
+      await User.create({
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        emailAddress: req.body.emailAddress,
+        password: req.body.password
+      });
+      res.location('/');
+      res.status(201).end();
+    }
+  }
 }));
 
 // GET request to /courses to return a list of courses (including the user that owns each course)
 router.get('/courses', asyncHandler( async (req, res) => {
   const courses = await Course.findAll({
+    attributes: ['id', 'title', 'description', 'estimatedTime', 'materialsNeeded'],
     include: [
       {
         model: User,
@@ -119,6 +156,7 @@ router.get('/courses', asyncHandler( async (req, res) => {
 // GET request to /courses/:id to return a course (including the user that owns the course) for the provided course ID
 router.get('/courses/:id', asyncHandler( async (req, res) => {
   const course = await Course.findByPk(req.params.id, {
+    attributes: ['id', 'title', 'description', 'estimatedTime', 'materialsNeeded'],
     include: [
       {
         model: User,
@@ -135,45 +173,73 @@ router.get('/courses/:id', asyncHandler( async (req, res) => {
 }));
 
 // POST request to /courses to create a course
-router.post('/courses', asyncHandler (async (req, res) => {
-  await Course.create({
-    title: req.body.title,
-    description: req.body.description,
-    estimatedTime: req.body.estimatedTime,
-    materialsNeeded: req.body.materialsNeeded,
-    userId: req.body.userId,
-  });
-  res.location('/');
-  res.status(201).end();
+router.post('/courses', authenticateUser, [
+  check('title')
+    .exists()
+    .withMessage('Please provide a value for "title"'),
+  check('description')
+    .exists()
+    .withMessage('Please provide a value for "description"'),
+], asyncHandler (async (req, res) => {
+  // Attempt to get the validation result from the Request object.
+  const errors = validationResult(req);
+
+  // If there are validation errors...
+  if (!errors.isEmpty()) {
+    // Use the Array `map()` method to get a list of error messages.
+    const errorMessages = errors.array().map(error => error.msg);
+
+    // Return the validation errors to the client.
+    res.status(400).json({ errors: errorMessages });
+  } else {
+    const course = await Course.create({
+      title: req.body.title,
+      description: req.body.description,
+      estimatedTime: req.body.estimatedTime,
+      materialsNeeded: req.body.materialsNeeded,
+      userId: req.body.userId,
+    });
+    res.location('/' + course.id);
+    res.status(201).end();
+  }
 }));
 
 // PUT request to /courses/:id to update a course
-router.put('/courses/:id', authenticateUser, asyncHandler (async (req, res) => {
-  const course = await Course.findByPk(req.params.id);
-  if (course) {
-    if (req.currentUser.id === course.userId) {
-      if (req.body.title) {
-        await Course.update({ title: req.body.title }, { where: { id: req.params.id }});
-      }
-      if (req.body.description) {
-        await Course.update({ description: req.body.description }, { where: { id: req.params.id }});
-      }
-      if (req.body.userId) {
-        await Course.update({ userId: req.body.userId }, { where: { id: req.params.id }});
-      }
-      if (req.body.estimatedTime) {
-        await Course.update({ estimatedTime: req.body.estimatedTime }, { where: { id: req.params.id }});
-      }
-      if (req.body.materialsNeeded) {
-        await Course.update({ materialsNeeded: req.body.materialsNeeded }, { where: { id: req.params.id }});
-      }
+router.put('/courses/:id', authenticateUser, [
+  check('title')
+    .exists()
+    .withMessage('Please provide a value for "title"'),
+  check('description')
+    .exists()
+    .withMessage('Please provide a value for "description"'),
+], asyncHandler (async (req, res) => {
+  // Attempt to get the validation result from the Request object.
+  const errors = validationResult(req);
+
+  // If there are validation errors...
+  if (!errors.isEmpty()) {
+    // Use the Array `map()` method to get a list of error messages.
+    const errorMessages = errors.array().map(error => error.msg);
   
-      res.status(204).end();
-    } else {
-      res.status(403).json({ message: 'You are not the owner of this course' });
-    }
+    // Return the validation errors to the client.
+    res.status(400).json({ errors: errorMessages });
   } else {
-    res.status(404).json({ message: "Course Not Found" });
+    const course = await Course.findByPk(req.params.id);
+    if (course) {
+      if (req.currentUser.id === course.userId) {
+        await Course.update({ title: req.body.title }, { where: { id: req.params.id }});
+        await Course.update({ description: req.body.description }, { where: { id: req.params.id }});
+        await Course.update({ userId: req.body.userId }, { where: { id: req.params.id }});
+        await Course.update({ estimatedTime: req.body.estimatedTime }, { where: { id: req.params.id }});
+        await Course.update({ materialsNeeded: req.body.materialsNeeded }, { where: { id: req.params.id }});
+
+        res.status(204).end();
+      } else {
+        res.status(403).json({ message: 'You are not the owner of this course' });
+      }
+    } else {
+      res.status(404).json({ message: "Course Not Found" });
+    }
   }
 }));
 
