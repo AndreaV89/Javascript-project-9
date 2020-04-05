@@ -30,7 +30,6 @@ async function authenticateUser (req, res, next) {
 
   // Parse the user's credentials from the Authorization header.
   const credentials = auth(req);
-  credentials.name = credentials.name;
 
   // If the user's credentials are available...
   if (credentials) {
@@ -199,7 +198,7 @@ router.post('/courses', authenticateUser, [
       materialsNeeded: req.body.materialsNeeded,
       userId: req.currentUser.id,
     });
-    res.location('/' + course.id);
+    res.location('courses/' + course.id);
     res.status(201).end();
   }
 }));
